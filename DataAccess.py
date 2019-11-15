@@ -1,13 +1,7 @@
-from tkinter import ttk
-from tkinter import *
 import pandas as pd
-import numpy as np
+
 import sqlite3
 import sqlalchemy
-from sqlalchemy.ext.automap import automap_base
-from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
-from psycopg2 import sql
 
 
 class CheeseRecord:
@@ -60,7 +54,8 @@ class CheeseRecord:
         print(cheese_id)
         query = """UPDATE cheeseData SET {}={} WHERE CheeseId={}""".format(self.tempColumn, value, cheese_id)
         print(query)
-        self.run_query(query,)
+        self.run_query(query, )
+
     def delete_record(self, cheese_id):
 
         query = 'DELETE FROM ' + self.working_table + " where CheeseId=" + cheese_id
