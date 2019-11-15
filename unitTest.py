@@ -1,6 +1,6 @@
 import unittest
-import CheeseRecord
-import ListManager
+import CanadianCheeseDirectory
+import DataPassThrough
 
 
 """Sean Di Rienzo"""
@@ -10,7 +10,7 @@ class MyTestCase(unittest.TestCase):
     def test_database_same_as_list(self):
         """ test that the database table has been created"""
         index = 1
-        list_object = ListManager.ListManager('canadianCheeseDirectory.csv', 'canadianCheeseDirectory.sqlite')
+        list_object = DataPassThrough.ListManager('canadianCheeseDirectory.csv', 'canadianCheeseDirectory.sqlite')
         list_object.csv_to_dataframe()
         list_object.dataframe_to_database_table()
         list_object.dataframe_to_list()
@@ -24,14 +24,14 @@ class MyTestCase(unittest.TestCase):
         print("Sean Di Rienzo Test 1 Complete")
 
     def test_add_database_record(self):
-        list_object = ListManager.ListManager('canadianCheeseDirectory.csv', 'canadianCheeseDirectory.sqlite')
+        list_object = DataPassThrough.ListManager('canadianCheeseDirectory.csv', 'canadianCheeseDirectory.sqlite')
         list_object.csv_to_dataframe()
         list_object.dataframe_to_list()
         list_object.dataframe_to_database_table()
 
         """add a new record"""
         list_object.add_record(
-            CheeseRecord.CheeseRecord(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18))
+            CanadianCheeseDirectory.CheeseRecord(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18))
 
         cursor = list_object.conn.cursor()
         cursor.execute('''SELECT * FROM cheeseData ORDER BY rowid DESC''')

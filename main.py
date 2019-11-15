@@ -8,17 +8,15 @@
 
 
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QInputDialog, QLineEdit
+from PyQt5.QtCore import QAbstractTableModel, QVariant
+from PyQt5.QtWidgets import QInputDialog, QLineEdit, QTableView
 
-import ListManager
+import Application
 
 
 class Ui_MainWindow(object):
     def __init__(self):
-        self.cheese_list = ListManager.ListManager('canadianCheeseDirectory.csv', 'canadianCheeseDirectory.sqlite')
-        self.cheese_list.csv_to_dataframe()
-        self.cheese_list.dataframe_to_database_table()
-        self.cheese_list.dataframe_to_list()
+        self.session = Application.DatabasePassThrough()
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -49,7 +47,7 @@ class Ui_MainWindow(object):
         self.delete_button = QtWidgets.QPushButton(self.centralwidget)
         self.delete_button.setGeometry(QtCore.QRect(1250, 180, 75, 23))
         self.delete_button.setObjectName("delete_button")
-        self.delete_button.clicked.connect(self.deleteRecord)
+        self.delete_button.clicked.connect(self.delete_record)
 
         self.create_button = QtWidgets.QPushButton(self.centralwidget)
         self.create_button.setGeometry(QtCore.QRect(1250, 120, 75, 23))
@@ -63,14 +61,21 @@ class Ui_MainWindow(object):
         self.commit_button = QtWidgets.QPushButton(self.centralwidget)
         self.commit_button.setGeometry(QtCore.QRect(1250, 550, 75, 23))
         self.commit_button.setObjectName("Commit")
-        self.commit_button.clicked.connect(self.cheese_list.commit_and_close)
+
         self.load_button = QtWidgets.QPushButton(self.centralwidget)
         self.load_button.setGeometry(QtCore.QRect(1250, 10, 75, 23))
         self.load_button.setObjectName("load_button")
         self.load_button.clicked.connect(self.loadData)
         self.tableWidget = QtWidgets.QTableWidget(self.centralwidget)
         self.tableWidget.setGeometry(QtCore.QRect(00, 0, 1200, 720))
-        self.tableWidget.setColumnCount(19)
+        self.tableWidget.setColumnCount(18)
+        self.tableWidget.setHorizontalHeaderLabels(('CheeseId', 'CheeseNameEn', 'ManufacturerNameEn',
+                                                    'ManufacturerProvCode', 'ManufacturingTypeEn', 'WebSiteEn',
+                                                    'FatContentPercent', 'MoisturePercent', 'ParticularitiesEn',
+                                                    'FlavourEn',
+                                                    'CharacteristicsEn', 'RipeningEn', 'Organic', 'CategoryTypeEn',
+                                                    'MilkTypeEn', 'MilkTreatmentTypeEn', 'RindTypeEn',
+                                                    'LastUpdateDate'))
         self.tableWidget.setObjectName("tableWidget")
         self.tableWidget.setRowCount(0)
         self.label = QtWidgets.QLabel(self.centralwidget)
@@ -93,36 +98,26 @@ class Ui_MainWindow(object):
         self.load_button.setText(_translate("MainWindow", "Load"))
 
     def loadData(self):
-        self.tableWidget.clear()
-        results = self.cheese_list.conn.execute("SELECT * FROM cheeseData")
+
+        results = self.session.get_all_records()
 
         for row_number, row_data in enumerate(results):
             self.tableWidget.insertRow(row_number)
             for column_number, data in enumerate(row_data):
                 self.tableWidget.setItem(row_number, column_number, QtWidgets.QTableWidgetItem(str(data)))
 
-    def deleteRecord(self):
+    def delete_record(self):
 
-        row = self.tableWidget.currentRow()
-        column = self.tableWidget.currentColumn()
-        self.tableWidget.removeRow(row)
+        self.tableWidget.setCurrentCell(self.tableWidget.currentRow(), 0)
 
-        self.cheese_list.delete_at_index(row)
+        cheeseid = self.tableWidget.currentItem().text()
+        print(cheeseid)
+        self.session.delete_record(cheeseid)
+        self.tableWidget.removeRow(self.tableWidget.currentRow())
 
-    def createRecord(self):
+    def add_record(self):
         self.tableWidget.setRowCount(self.tableWidget.rowCount() + 1)
-        tempObject = self.cheese_list.new_record(self.input_CheeseId, self.input_CheeseNameEn,
-                                                 self.input_ManufacturerNameEn,
-                                                 self.input_ManufacturerProvCode, self.input_ManufacturingTypeEn,
-                                                 self.input_WebSiteEn, self.input_FatContentPercent,
-                                                 self.input_MoisturePercent, self.input_ParticularitiesEn,
-                                                 self.input_FlavourEn, self.input_CharacteristicsEn,
-                                                 self.input_RipeningEn, self.input_Organic, self.input_CategoryTypeEn,
-                                                 self.input_MilkTypeEn, self.input_MilkTreatmentTypeEn,
-                                                 self.input_RindTypeEn, self.input_LastUpdateDate)
-
-        self.cheese_list.add_record(tempObject)
-
+        print("in main add-record")
         self.tableWidget.setItem(self.tableWidget.rowCount() - 1, 0,
                                  QtWidgets.QTableWidgetItem(str(self.input_CheeseId)))
         self.tableWidget.setItem(self.tableWidget.rowCount() - 1, 1,
@@ -160,25 +155,37 @@ class Ui_MainWindow(object):
         self.tableWidget.setItem(self.tableWidget.rowCount() - 1, 17,
                                  QtWidgets.QTableWidgetItem(str(self.input_LastUpdateDate)))
 
+        self.session.add_record(self.input_CheeseId, self.input_CheeseNameEn,
+                                self.input_ManufacturerNameEn,
+                                self.input_ManufacturerProvCode, self.input_ManufacturingTypeEn,
+                                self.input_WebSiteEn, self.input_FatContentPercent,
+                                self.input_MoisturePercent, self.input_ParticularitiesEn,
+                                self.input_FlavourEn, self.input_CharacteristicsEn,
+                                self.input_RipeningEn, self.input_Organic, self.input_CategoryTypeEn,
+                                self.input_MilkTypeEn, self.input_MilkTreatmentTypeEn,
+                                self.input_RindTypeEn, self.input_LastUpdateDate)
+
     def editRecord(self):
 
         row = self.tableWidget.currentRow()
         column = self.tableWidget.currentColumn()
-        self.cheese_list.edit_at_index(row, column, self.input_editInput)
-        self.cheese_list.edit_database_field(row, column, self.input_editInput)
+        self.tableWidget.setCurrentCell(self.tableWidget.currentRow(), 0)
         self.tableWidget.setItem(row, column,
                                  QtWidgets.QTableWidgetItem(str(self.input_editInput)))
+        print("updated view, trying to query")
+        cheeseid = self.tableWidget.currentItem().text()
+        self.session.edit_record(column, cheeseid,
+                                 str(self.input_editInput))
 
     def showDialogAdd(self):
 
-        text, okPressed = QInputDialog.getText(MainWindow, 'Input Dialog',
-                                               'Enter your name:', QLineEdit.Normal)
+        text, okPressed = QInputDialog.getText(MainWindow, 'Field Creator', 'CheeseId', QLineEdit.Normal)
         if okPressed:
             self.input_CheeseId = text
 
-        text, okPressed = QInputDialog.getText(MainWindow, 'Field Creator', 'CheeseId', QLineEdit.Normal)
-        if okPressed:
-            self.input_CheeseNameEn = text
+            text, okPressed = QInputDialog.getText(MainWindow, 'Field Creator', 'CheeseNameEn', QLineEdit.Normal)
+            if okPressed:
+                self.input_CheeseNameEn = text
 
         text, okPressed = QInputDialog.getText(MainWindow, 'Field Creator', 'ManufacturerNameEn', QLineEdit.Normal)
         if okPressed:
@@ -228,7 +235,7 @@ class Ui_MainWindow(object):
         if okPressed:
             self.input_CategoryTypeEn = text
 
-        text, okPressed = QInputDialog.getText(MainWindow, 'Field Creator', 'Enter your name', QLineEdit.Normal)
+        text, okPressed = QInputDialog.getText(MainWindow, 'Field Creator', 'MilkTypeEn', QLineEdit.Normal)
         if okPressed:
             self.input_MilkTypeEn = text
 
@@ -244,17 +251,16 @@ class Ui_MainWindow(object):
         if okPressed:
             self.input_LastUpdateDate = text
 
-        self.createRecord()
+        self.add_record()
 
     def showDialogEdit(self):
+
         text, okPressed = QInputDialog.getText(MainWindow, 'Field Updater',
                                                "Replace with: ", QLineEdit.Normal)
         if okPressed:
             self.input_editInput = text
-            self.editRecord()
 
-
-
+        self.editRecord()
 
 
 if __name__ == "__main__":
